@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import './App.css'
+import { RangeSlider } from './RangeSlider'
 
 const DEFAULT_ROUTES = ['Tip Track Commute', 'Waimapihi', 'Fenceline']
 const TERRAINS = ['trail', 'road', 'treadmill'] as const
@@ -138,8 +139,8 @@ const INITIAL: FormState = {
   duration: '',
   vert: '',
   terrain: 'trail',
-  avgHr: '',
-  maxHr: '',
+  avgHr: '132',
+  maxHr: '148',
   hipStart: '',
   hipEnd: '',
   hipBehavior: '',
@@ -297,31 +298,26 @@ export default function App() {
           </div>
 
           {/* Heart Rate */}
-          <div className="row-2">
-            <div className="field">
-              <label className="label">
-                Avg HR <span className="unit">bpm</span>
-              </label>
-              <input
-                className="input"
-                type="number"
-                placeholder="136"
-                value={form.avgHr}
-                onChange={e => set('avgHr', e.target.value)}
-              />
+          <div className="hr-box">
+            <div className="hr-box-title">Heartrate</div>
+            <div className="hr-values">
+              {(['avgHr', 'maxHr'] as const).map((key, i) => {
+                const val = Number(form[key]) || (key === 'avgHr' ? 132 : 148)
+                const pct = ((val - 120) / (160 - 120)) * 100
+                return (
+                  <div key={key} className="hr-handle-label" style={{ left: `${pct}%` }}>
+                    <span className="slider-value">{i === 0 ? 'AVG' : 'MAX'} [{form[key]}]</span>
+                  </div>
+                )
+              })}
             </div>
-            <div className="field">
-              <label className="label">
-                Max HR <span className="unit">bpm</span>
-              </label>
-              <input
-                className="input"
-                type="number"
-                placeholder="148"
-                value={form.maxHr}
-                onChange={e => set('maxHr', e.target.value)}
-              />
-            </div>
+            <RangeSlider
+              min={120}
+              max={160}
+              low={Number(form.avgHr) || 132}
+              high={Number(form.maxHr) || 148}
+              onChange={(low, high) => { set('avgHr', String(low)); set('maxHr', String(high)) }}
+            />
           </div>
 
           {/* Hip */}
