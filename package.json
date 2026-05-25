@@ -1,0 +1,18 @@
+{
+  "name": "activity-logger",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,client -c cyan,green \"yarn workspace activity-logger-server dev\" \"yarn workspace activity-logger-client dev\"",
+    "build": "yarn workspace activity-logger-client build",
+    "start": "yarn workspace activity-logger-server start",
+    "typecheck": "yarn workspace activity-logger-client typecheck && yarn workspace activity-logger-server typecheck"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

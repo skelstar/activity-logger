@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"require\\('playwright'\\)\")",
+      "Bash(npx playwright *)",
+      "Bash(curl -s http://localhost:3001/api/routes)",
+      "Bash(node -e \"process.stdin.resume\\(\\);process.stdin.setEncoding\\('utf8'\\);let d='';process.stdin.on\\('data',c=>d+=c\\);process.stdin.on\\('end',\\(\\)=>console.log\\(JSON.parse\\(d\\)\\)\\)\")",
+      "Bash(curl -s -X POST http://localhost:3001/api/routes -H 'Content-Type: application/json' -d '{\"name\": \"Mount Vic Loop\"}')",
+      "Bash(yarn typecheck *)",
+      "Bash(yarn build *)",
+      "Bash(yarn workspace *)"
+    ]
+  }
+}
