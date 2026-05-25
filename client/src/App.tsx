@@ -322,7 +322,7 @@ export default function App() {
 
           {/* Hip */}
           <div className="hr-box">
-            <div className="hr-box-title">Hip <span className="hr-box-values">: Start {form.hipStart} – End {form.hipEnd}</span></div>
+            <div className="hr-box-title">Hip</div>
             <RangeSlider
               min={0}
               max={5}
@@ -330,6 +330,10 @@ export default function App() {
               high={Number(form.hipEnd)}
               onChange={(low, high) => { set('hipStart', String(low)); set('hipEnd', String(high)) }}
             />
+            <div className="hip-values">
+              <span className="slider-value">Start - {form.hipStart}</span>
+              <span className="slider-value">End - {form.hipEnd}</span>
+            </div>
             <input
               className="input mt"
               type="text"

@@ -106,11 +106,9 @@
   letter-spacing: .04em;
   margin-bottom: calc(.25rem + 3px);
 }
-.hr-box-values {
-  font-weight: 400;
-  text-transform: none;
-  letter-spacing: 0;
-  color: #555;
+.hip-values {
+  display: flex;
+  justify-content: space-between;
 }
 .hr-values {
   position: relative;
