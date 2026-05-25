@@ -5,7 +5,9 @@ WORKDIR /app
 COPY package.json yarn.lock ./
 COPY client/package.json ./client/
 COPY server/package.json ./server/
-RUN yarn install --frozen-lockfile
+# Override registry — yarn.lock was generated on a machine with a private registry
+RUN yarn config set registry https://registry.npmjs.org && \
+    yarn install --registry https://registry.npmjs.org
 
 # Build client static assets
 COPY . .
