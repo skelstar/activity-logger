@@ -25,8 +25,8 @@ export function RangeSlider({ min, max, low, high, onChange }: Props) {
     const move = (ev: MouseEvent | TouchEvent) => {
       const clientX = 'touches' in ev ? ev.touches[0].clientX : ev.clientX
       const v = valueFromClientX(clientX)
-      if (which === 'low') onChange(Math.min(v, high - 1), high)
-      else onChange(low, Math.max(v, low + 1))
+      if (which === 'low') onChange(Math.min(v, high), high)
+      else onChange(low, Math.max(v, low))
     }
 
     const up = () => {

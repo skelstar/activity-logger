@@ -141,8 +141,8 @@ const INITIAL: FormState = {
   terrain: 'trail',
   avgHr: '132',
   maxHr: '148',
-  hipStart: '',
-  hipEnd: '',
+  hipStart: '0',
+  hipEnd: '2',
   hipBehavior: '',
   recovery: '',
   notes: '',
@@ -321,34 +321,15 @@ export default function App() {
           </div>
 
           {/* Hip */}
-          <div className="field">
-            <label className="label">Hip</label>
-            <div className="row-2">
-              <div className="field">
-                <label className="sub-label">Start (0–10)</label>
-                <input
-                  className="input"
-                  type="number"
-                  min="0"
-                  max="10"
-                  placeholder="0"
-                  value={form.hipStart}
-                  onChange={e => set('hipStart', e.target.value)}
-                />
-              </div>
-              <div className="field">
-                <label className="sub-label">End (0–10)</label>
-                <input
-                  className="input"
-                  type="number"
-                  min="0"
-                  max="10"
-                  placeholder="0"
-                  value={form.hipEnd}
-                  onChange={e => set('hipEnd', e.target.value)}
-                />
-              </div>
-            </div>
+          <div className="hr-box">
+            <div className="hr-box-title">Hip <span className="hr-box-values">: Start {form.hipStart} – End {form.hipEnd}</span></div>
+            <RangeSlider
+              min={0}
+              max={5}
+              low={Number(form.hipStart)}
+              high={Number(form.hipEnd)}
+              onChange={(low, high) => { set('hipStart', String(low)); set('hipEnd', String(high)) }}
+            />
             <input
               className="input mt"
               type="text"
