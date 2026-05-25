@@ -152,6 +152,8 @@ export default function App() {
   const [routes, setRoutes] = useState<string[]>(DEFAULT_ROUTES)
   const [copied, setCopied] = useState<'text' | 'json' | null>(null)
   const [tab, setTab] = useState<'text' | 'json'>('text')
+  const [editedText, setEditedText] = useState<string | null>(null)
+  const [editedJson, setEditedJson] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/routes')
@@ -167,9 +169,11 @@ export default function App() {
   const formData: ResolvedFormState = { ...form, date: effectiveDate }
   const textOut = toText(formData)
   const jsonOut = JSON.stringify(toJSON(formData), null, 2)
+  const displayText = editedText ?? textOut
+  const displayJson = editedJson ?? jsonOut
 
   const copy = async (type: 'text' | 'json') => {
-    await navigator.clipboard.writeText(type === 'text' ? textOut : jsonOut)
+    await navigator.clipboard.writeText(type === 'text' ? displayText : displayJson)
     setCopied(type)
     setTimeout(() => setCopied(null), 2000)
   }
@@ -402,13 +406,26 @@ export default function App() {
               </button>
             </div>
           </div>
-          <pre className="preview-body">{tab === 'text' ? textOut : jsonOut}</pre>
+          <textarea
+            className="preview-body"
+            value={tab === 'text' ? displayText : displayJson}
+            onChange={e => {
+              if (tab === 'text') setEditedText(e.target.value)
+              else setEditedJson(e.target.value)
+            }}
+          />
           <div className="preview-actions">
-            <button className="copy-btn primary" onClick={() => copy('text')}>
-              {copied === 'text' ? '✓ Copied!' : 'Copy Text'}
+            <button className="copy-btn primary" onClick={() => copy(tab)}>
+              {copied === tab ? '✓ Copied!' : `Copy ${tab === 'text' ? 'Text' : 'JSON'}`}
             </button>
-            <button className="copy-btn ghost" onClick={() => copy('json')}>
-              {copied === 'json' ? '✓ Copied!' : 'Copy JSON'}
+            <button
+              className="copy-btn ghost"
+              onClick={() => {
+                if (tab === 'text') setEditedText(null)
+                else setEditedJson(null)
+              }}
+            >
+              Reset
             </button>
           </div>
         </div>

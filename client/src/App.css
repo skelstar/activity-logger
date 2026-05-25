@@ -197,6 +197,9 @@ select.input {
   color: var(--text);
   background: var(--surface-2);
   min-height: 140px;
+  border: none;
+  outline: none;
+  resize: none;
 }
 
 .preview-actions {
