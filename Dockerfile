@@ -2,12 +2,10 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Install all dependencies (including devDeps for build)
-COPY package.json yarn.lock ./
+COPY package.json ./
 COPY client/package.json ./client/
 COPY server/package.json ./server/
-# Override registry — yarn.lock was generated on a machine with a private registry
-RUN yarn config set registry https://registry.npmjs.org && \
-    yarn install --registry https://registry.npmjs.org
+RUN yarn install
 
 # Build client static assets
 COPY . .
