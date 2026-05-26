@@ -1,9 +1,11 @@
+import { config as loadEnv } from 'dotenv'
 import express, { Request, Response } from 'express'
 import cors from 'cors'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
+loadEnv({ path: join(__dirname, '..', '.env') })
 const isProd = process.env.NODE_ENV === 'production'
 
 const app = express()
@@ -36,6 +38,47 @@ app.post('/api/routes', (req: Request, res: Response) => {
     customRoutes.push(trimmed)
   }
   res.json({ routes: allRoutes() })
+})
+
+let cachedAccessToken: string | null = null
+let tokenExpiry = 0
+
+async function getStravaAccessToken(): Promise<string> {
+  if (cachedAccessToken && Date.now() < tokenExpiry) return cachedAccessToken
+  const { STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET, STRAVA_REFRESH_TOKEN } = process.env
+  if (!STRAVA_CLIENT_ID || !STRAVA_CLIENT_SECRET || !STRAVA_REFRESH_TOKEN) {
+    throw new Error('Strava credentials not configured (STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET, STRAVA_REFRESH_TOKEN)')
+  }
+  const res = await fetch('https://www.strava.com/oauth/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      client_id: STRAVA_CLIENT_ID,
+      client_secret: STRAVA_CLIENT_SECRET,
+      refresh_token: STRAVA_REFRESH_TOKEN,
+      grant_type: 'refresh_token',
+    }),
+  })
+  if (!res.ok) throw new Error(`Strava token refresh failed: ${res.status}`)
+  const data = await res.json() as { access_token: string; expires_at: number }
+  cachedAccessToken = data.access_token
+  tokenExpiry = data.expires_at * 1000
+  return cachedAccessToken
+}
+
+app.get('/api/strava/latest-activity', async (_req: Request, res: Response) => {
+  try {
+    const token = await getStravaAccessToken()
+    const r = await fetch('https://www.strava.com/api/v3/athlete/activities?per_page=1', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!r.ok) { res.status(502).json({ error: `Strava API error: ${r.status}` }); return }
+    const activities = await r.json() as Array<{ name: string }>
+    if (!activities.length) { res.status(404).json({ error: 'No activities found' }); return }
+    res.json({ name: activities[0].name })
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Unknown error' })
+  }
 })
 
 if (isProd) {

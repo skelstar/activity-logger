@@ -155,6 +155,9 @@ export default function App() {
   const [tab, setTab] = useState<'text' | 'json'>('text')
   const [editedText, setEditedText] = useState<string | null>(null)
   const [editedJson, setEditedJson] = useState<string | null>(null)
+  const [stravaTitle, setStravaTitle] = useState<string | null>(null)
+  const [stravaLoading, setStravaLoading] = useState(false)
+  const [stravaError, setStravaError] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/routes')
@@ -194,11 +197,43 @@ export default function App() {
     }
   }
 
+  const fetchStravaActivity = async () => {
+    setStravaLoading(true)
+    setStravaError(null)
+    try {
+      const res = await fetch('/api/strava/latest-activity')
+      const data = await res.json() as { name?: string; error?: string }
+      if (!res.ok) { setStravaError(data.error ?? 'Failed to fetch'); return }
+      setStravaTitle(data.name ?? null)
+    } catch {
+      setStravaError('Could not reach server')
+    } finally {
+      setStravaLoading(false)
+    }
+  }
+
   return (
     <div className="app">
       <header className="header">
-        <h1 className="header-title">Activity Logger</h1>
-        <p className="header-sub">Log a run</p>
+        <div className="header-row">
+          <div>
+            <h1 className="header-title">Activity Logger</h1>
+            <p className="header-sub">Log a run</p>
+          </div>
+          <button
+            className="strava-btn"
+            onClick={fetchStravaActivity}
+            disabled={stravaLoading}
+          >
+            {stravaLoading ? 'Loading…' : 'Get from Strava'}
+          </button>
+        </div>
+        {stravaTitle && (
+          <div className="strava-banner">Latest: {stravaTitle}</div>
+        )}
+        {stravaError && (
+          <div className="strava-error">{stravaError}</div>
+        )}
       </header>
 
       <div className="layout">

@@ -8,6 +8,12 @@
   color: #fff;
   padding: 1.25rem 1.5rem 1rem;
 }
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
 .header-title {
   font-size: 1.25rem;
   font-weight: 700;
@@ -17,6 +23,34 @@
   font-size: .85rem;
   opacity: .75;
   margin-top: .1rem;
+}
+.strava-btn {
+  padding: .45rem 1rem;
+  background: rgba(255,255,255,.15);
+  color: #fff;
+  border: 1.5px solid rgba(255,255,255,.4);
+  border-radius: 999px;
+  font-size: .85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: background .15s;
+  flex-shrink: 0;
+}
+.strava-btn:hover:not(:disabled) { background: rgba(255,255,255,.25); }
+.strava-btn:disabled { opacity: .6; cursor: default; }
+.strava-banner {
+  margin-top: .75rem;
+  font-size: .9rem;
+  font-weight: 500;
+  opacity: .95;
+}
+.strava-error {
+  margin-top: .75rem;
+  font-size: .85rem;
+  opacity: .8;
+  color: #ffe0e0;
 }
 
 .layout {
