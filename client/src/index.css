@@ -5,24 +5,24 @@
 }
 
 :root {
-  --bg: #f0f2f5;
+  --bg: #faf5f2;
   --surface: #ffffff;
-  --surface-2: #f8f9fa;
-  --border: #e2e6ea;
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
-  --primary-light: #eff6ff;
-  --secondary: #6b7280;
-  --text: #111827;
-  --text-muted: #6b7280;
-  --success: #16a34a;
+  --surface-2: #fdf1eb;
+  --border: #f0d9cc;
+  --primary: #fc4c02;
+  --primary-hover: #e04100;
+  --primary-light: #fff0ea;
+  --secondary: #7a5a4e;
+  --text: #1a0f0a;
+  --text-muted: #7a5a4e;
+  --success: #2d8a4e;
   --radius: 12px;
   --radius-sm: 8px;
-  --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+  --shadow: 0 1px 3px rgba(252,76,2,.08), 0 1px 2px rgba(252,76,2,.06);
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Roboto Mono', 'SF Mono', 'Cascadia Code', monospace;
   background: var(--bg);
   color: var(--text);
   font-size: 16px;

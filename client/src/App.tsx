@@ -249,13 +249,14 @@ export default function App() {
             {stravaLoading ? 'Loading…' : 'Get from Strava'}
           </button>
         </div>
-        {stravaTitle && (
-          <div className="strava-banner">Latest: {stravaTitle}</div>
-        )}
         {stravaError && (
           <div className="strava-error">{stravaError}</div>
         )}
       </header>
+
+      {stravaTitle && (
+        <div className="activity-title">{stravaTitle}</div>
+      )}
 
       <div className="layout">
         <form className="form card" onSubmit={e => e.preventDefault()}>
