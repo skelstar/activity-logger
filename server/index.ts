@@ -73,9 +73,10 @@ app.get('/api/strava/latest-activity', async (_req: Request, res: Response) => {
       headers: { Authorization: `Bearer ${token}` },
     })
     if (!r.ok) { res.status(502).json({ error: `Strava API error: ${r.status}` }); return }
-    const activities = await r.json() as Array<{ name: string }>
+    const activities = await r.json() as Array<{ name: string; average_heartrate?: number; max_heartrate?: number; moving_time?: number; total_elevation_gain?: number }>
     if (!activities.length) { res.status(404).json({ error: 'No activities found' }); return }
-    res.json({ name: activities[0].name })
+    const { name, average_heartrate, max_heartrate, moving_time, total_elevation_gain } = activities[0]
+    res.json({ name, avg_hr: average_heartrate ?? null, max_hr: max_heartrate ?? null, moving_time: moving_time ?? null, vert: total_elevation_gain ?? null })
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : 'Unknown error' })
   }

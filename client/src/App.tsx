@@ -202,9 +202,17 @@ export default function App() {
     setStravaError(null)
     try {
       const res = await fetch('/api/strava/latest-activity')
-      const data = await res.json() as { name?: string; error?: string }
+      const data = await res.json() as { name?: string; avg_hr?: number | null; max_hr?: number | null; moving_time?: number | null; vert?: number | null; error?: string }
       if (!res.ok) { setStravaError(data.error ?? 'Failed to fetch'); return }
       setStravaTitle(data.name ?? null)
+      if (data.avg_hr != null) set('avgHr', String(Math.round(data.avg_hr)))
+      if (data.max_hr != null) set('maxHr', String(Math.round(data.max_hr)))
+      if (data.vert != null) set('vert', String(Math.round(data.vert)))
+      if (data.moving_time != null) {
+        const h = Math.floor(data.moving_time / 3600)
+        const m = Math.floor((data.moving_time % 3600) / 60)
+        set('duration', h > 0 ? `${h}h${m}m` : `${m}m`)
+      }
     } catch {
       setStravaError('Could not reach server')
     } finally {
