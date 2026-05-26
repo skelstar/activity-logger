@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import './App.css'
 import { RangeSlider } from './RangeSlider'
 
@@ -85,27 +85,32 @@ function toText(form: ResolvedFormState): string {
   const lines: string[] = []
 
   lines.push(`I went for a run ${getDayLabel(form.date)}`)
-  if (route) lines.push(route)
+  if (route) lines.push(`Route: ${route}`)
 
   const dv = [form.duration, form.vert ? `${form.vert}m` : ''].filter(Boolean)
-  if (dv.length) lines.push(dv.join(' / '))
+  if (dv.length) lines.push(`Duration: ${dv.join(' / ')}`)
 
-  if (terrain) lines.push(terrain)
+  if (terrain) lines.push(`Type: ${terrain}`)
 
   const hr = [
-    form.avgHr ? `${form.avgHr} avg` : '',
-    form.maxHr ? `${form.maxHr} max` : '',
+    form.avgHr ? `${form.avgHr} bpm avg` : '',
+    form.maxHr ? `${form.maxHr} bpm max` : '',
   ].filter(Boolean)
-  if (hr.length) lines.push(hr.join(' / '))
+  if (hr.length) lines.push(`HR: ${hr.join(' / ')}`)
 
   const hs = form.hipStart !== '' ? form.hipStart : null
   const he = form.hipEnd !== '' ? form.hipEnd : null
-  if (hs !== null || he !== null) lines.push(`Hip ${hs ?? '?'}→${he ?? '?'}`)
-  if (form.hipBehavior) lines.push(form.hipBehavior)
-  if (form.recovery) lines.push(form.recovery)
+  if (hs !== null || he !== null || form.hipBehavior) {
+    lines.push('Hip:')
+    if (hs !== null || he !== null) lines.push(`  ${hs ?? '?'}→${he ?? '?'}/10`)
+    if (form.hipBehavior) lines.push(`  Info: ${form.hipBehavior}`)
+  }
+
+  if (form.recovery) lines.push(`Recovery: ${form.recovery}`)
+
   if (form.notes) {
     lines.push('Notes:')
-    lines.push(form.notes)
+    lines.push(form.notes.split('\n').map(l => `  ${l}`).join('\n'))
   }
 
   return lines.join('\n')
@@ -139,10 +144,10 @@ const INITIAL: FormState = {
   duration: '',
   vert: '',
   terrain: 'trail',
-  avgHr: '132',
-  maxHr: '148',
-  hipStart: '0',
-  hipEnd: '2',
+  avgHr: '',
+  maxHr: '',
+  hipStart: '',
+  hipEnd: '',
   hipBehavior: '',
   recovery: '',
   notes: '',
@@ -155,6 +160,7 @@ export default function App() {
   const [tab, setTab] = useState<'text' | 'json'>('text')
   const [editedText, setEditedText] = useState<string | null>(null)
   const [editedJson, setEditedJson] = useState<string | null>(null)
+  const previewRef = useRef<HTMLTextAreaElement>(null)
   const [stravaTitle, setStravaTitle] = useState<string | null>(null)
   const [stravaLoading, setStravaLoading] = useState(false)
   const [stravaError, setStravaError] = useState<string | null>(null)
@@ -175,6 +181,13 @@ export default function App() {
   const jsonOut = JSON.stringify(toJSON(formData), null, 2)
   const displayText = editedText ?? textOut
   const displayJson = editedJson ?? jsonOut
+
+  useEffect(() => {
+    const el = previewRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [displayText, displayJson, tab])
 
   const copy = async (type: 'text' | 'json') => {
     await navigator.clipboard.writeText(type === 'text' ? displayText : displayJson)
@@ -403,10 +416,15 @@ export default function App() {
             <label className="label">Notes</label>
             <textarea
               className="input textarea"
-              rows={3}
+              rows={1}
               placeholder="Anything else worth noting…"
               value={form.notes}
               onChange={e => set('notes', e.target.value)}
+              onInput={e => {
+                const el = e.currentTarget
+                el.style.height = 'auto'
+                el.style.height = `${el.scrollHeight}px`
+              }}
             />
           </div>
 
@@ -431,6 +449,7 @@ export default function App() {
             </div>
           </div>
           <textarea
+            ref={previewRef}
             className="preview-body"
             value={tab === 'text' ? displayText : displayJson}
             onChange={e => {

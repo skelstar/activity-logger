@@ -119,8 +119,9 @@
   color: #bbb;
 }
 .textarea {
-  resize: vertical;
-  min-height: 72px;
+  resize: none;
+  overflow: hidden;
+  min-height: 2.4rem;
 }
 .slider-value {
   color: #555;
@@ -284,7 +285,6 @@ select.input {
 .tab.active { background: var(--primary-light); color: var(--primary); font-weight: 600; }
 
 .preview-body {
-  flex: 1;
   padding: 1rem;
   font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
   font-size: .8rem;
@@ -293,10 +293,12 @@ select.input {
   word-break: break-word;
   color: var(--text);
   background: var(--surface-2);
-  min-height: 140px;
   border: none;
   outline: none;
   resize: none;
+  overflow: hidden;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .preview-actions {
