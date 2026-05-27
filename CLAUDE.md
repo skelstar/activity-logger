@@ -26,25 +26,15 @@ Yarn workspaces monorepo with two packages:
 
 ## Deployment
 
-The app is deployed to k3s on Tatooine via FluxCD. The k8s manifests live in the **Tatooine-Configuration repo** at `deployments/activity-logger/k8s/manifests.yaml` — not in this repo.
+The app runs in k3s on Tatooine, managed by FluxCD. See [README.md](README.md) for the full deploy workflow.
 
-Images are published to `ghcr.io/skelstar/activity-logger` and tagged by version (e.g. `1.1.0`).
+**Short version:** make changes, `git push`, run `./deploy.sh` — Tatooine redeploys automatically within 5 minutes. No SSH required.
 
-To release a new version, run from this directory:
-
-```bash
-./deploy.sh <version>
-```
-
-See [README.md](README.md) for full deploy instructions and one-time setup.
-
-### How the version badge works
-
-The app displays the running version in the top-right corner of the header. The version is injected at runtime via the `VERSION` environment variable set in the k8s manifest — it is not baked into the Docker image. This means:
-
-- The image tag and `VERSION` env var are always kept in sync by `deploy.sh`
-- Bumping the version requires a new image build and push (use `deploy.sh`)
-- The badge reflects exactly what FluxCD has deployed
+### Key facts
+- Images are published to `ghcr.io/skelstar/activity-logger:<version>`, built for `linux/amd64`
+- The k8s manifests live in the **Tatooine-Configuration** repo at `deployments/activity-logger/k8s/manifests.yaml` — not in this repo
+- `./deploy.sh` with no argument auto-bumps the minor version; pass a version explicitly to override
+- The version badge in the app UI reads `VERSION` from the environment at runtime — it is not baked into the image
 
 ## Planned work
 
