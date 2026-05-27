@@ -21,6 +21,21 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# Check there are no uncommitted changes
+if ! git -C "$SCRIPT_DIR" diff --quiet || ! git -C "$SCRIPT_DIR" diff --cached --quiet; then
+  echo "✗ You have uncommitted changes. Commit and push before deploying."
+  git -C "$SCRIPT_DIR" status --short
+  exit 1
+fi
+
+# Check there are no unpushed commits
+git -C "$SCRIPT_DIR" fetch origin --quiet
+UNPUSHED=$(git -C "$SCRIPT_DIR" rev-list origin/HEAD..HEAD --count)
+if [ "$UNPUSHED" -gt 0 ]; then
+  echo "✗ You have $UNPUSHED unpushed commit(s). Push before deploying."
+  exit 1
+fi
+
 # Find the manifest — two possible layouts:
 #   Tatooine:  <repo-root>/deployments/activity-logger/src/  +  ../k8s/
 #   Laptop:    GitHub/activity-logger/  +  ../Tatooine-Configuration/deployments/activity-logger/k8s/
