@@ -1,0 +1,125 @@
+# .github/workflows/deploy.yml
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Explicit version (e.g. 2.0.0) — leave blank to auto-bump minor"
+        required: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout app repo
+        uses: actions/checkout@v4
+
+      - name: Checkout Tatooine-Configuration
+        uses: actions/checkout@v4
+        with:
+          repository: skelstar/Tatooine-Configuration
+          path: Tatooine-Configuration
+          token: ${{ secrets.TATOOINE_PAT }}
+
+      - name: Resolve version
+        id: version
+        run: |
+          MANIFEST="Tatooine-Configuration/deployments/activity-logger/k8s/manifests.yaml"
+          VERSION=$(python3 - "$MANIFEST" "${{ github.event.inputs.version || '' }}" <<'PYEOF'
+          import sys, re
+
+          def parse(v):
+              try:
+                  return tuple(int(x) for x in v.strip().split('.'))
+              except ValueError:
+                  print(f"✗ Invalid version format '{v}' — must be X.Y.Z", file=sys.stderr)
+                  sys.exit(1)
+
+          path, requested = sys.argv[1], sys.argv[2]
+          with open(path) as f:
+              content = f.read()
+
+          m = re.search(r'- name: VERSION\s*\n\s*value: "([^"]+)"', content)
+          if not m:
+              print("✗ Could not find VERSION in manifest.", file=sys.stderr)
+              sys.exit(1)
+
+          current = m.group(1)
+          major, minor, patch = parse(current)
+
+          if requested:
+              new_version = requested
+              if parse(new_version) <= parse(current):
+                  print(f"✗ Version {new_version} must be > current {current}", file=sys.stderr)
+                  sys.exit(1)
+          else:
+              new_version = f"{major}.{minor + 1}.0"
+
+          print(f"  {current} → {new_version}", file=sys.stderr)
+          print(new_version)
+          PYEOF
+          )
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/skelstar/activity-logger:$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.version.outputs.image }}
+
+      - name: Update manifest
+        run: |
+          python3 - \
+            "Tatooine-Configuration/deployments/activity-logger/k8s/manifests.yaml" \
+            "${{ steps.version.outputs.version }}" <<'PYEOF'
+          import sys, re
+
+          path, version = sys.argv[1], sys.argv[2]
+          with open(path) as f:
+              content = f.read()
+
+          updated = re.sub(
+              r'(image: ghcr\.io/skelstar/activity-logger:)[^\s]+',
+              rf'\g<1>{version}',
+              content
+          )
+          updated = re.sub(
+              r'(- name: VERSION\s*\n\s*value: )"[^"]*"',
+              rf'\g<1>"{version}"',
+              updated
+          )
+
+          if updated == content:
+              print("✗ No changes made — check image/VERSION lines in manifest.")
+              sys.exit(1)
+
+          with open(path, 'w') as f:
+              f.write(updated)
+          print(f"  Manifest updated to {version}")
+          PYEOF
+
+      - name: Commit and push Tatooine-Configuration
+        run: |
+          cd Tatooine-Configuration
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add deployments/activity-logger/k8s/manifests.yaml
+          git commit -m "activity-logger: release ${{ steps.version.outputs.version }}"
+          git push
