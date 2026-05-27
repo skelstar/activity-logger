@@ -36,6 +36,35 @@ if [ -z "$MANIFEST" ]; then
 fi
 echo "▶ Using manifest: $MANIFEST"
 
+# ── 0. Version check ─────────────────────────────────────────────────────────
+python3 - "$MANIFEST" "$VERSION" <<'EOF'
+import sys, re
+from functools import cmp_to_key
+
+def parse(v):
+    try:
+        return tuple(int(x) for x in v.strip().split('.'))
+    except ValueError:
+        print(f"✗ Invalid version format '{v}' — must be X.Y.Z (e.g. 1.2.0)")
+        sys.exit(1)
+
+path, new_version = sys.argv[1], sys.argv[2]
+with open(path) as f:
+    content = f.read()
+
+m = re.search(r'- name: VERSION\s*\n\s*value: "([^"]+)"', content)
+if not m:
+    print("✗ Could not find VERSION in manifest.")
+    sys.exit(1)
+
+current = m.group(1)
+if parse(new_version) <= parse(current):
+    print(f"✗ Version {new_version} must be greater than current version {current}")
+    sys.exit(1)
+
+print(f"  {current} → {new_version} ✓")
+EOF
+
 # ── 1. Build ────────────────────────────────────────────────────────────────
 echo "▶ Building and pushing $IMAGE (linux/amd64)..."
 docker buildx build \
