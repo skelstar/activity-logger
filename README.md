@@ -33,6 +33,13 @@ Starts both servers concurrently:
 | App (Vite) | http://localhost:5173 |
 | API (Express) | http://localhost:3001 |
 
+## Deployment
+```
+git push
+./deploy.sh 1.2.1
+```
+`./deploy.sh` without the version number will just auto-increment the minor version number.
+
 ## Production
 
 ```bash
