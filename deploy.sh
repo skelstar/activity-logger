@@ -1,6 +1,8 @@
 #!/bin/bash
-# Usage: ./deploy.sh <version>
-# Example: ./deploy.sh 1.1.0
+# Usage: ./deploy.sh [version]
+# Examples:
+#   ./deploy.sh          auto-bumps minor version (1.1.0 → 1.2.0)
+#   ./deploy.sh 2.0.0    deploys a specific version (must be > current)
 #
 # Builds the Docker image, pushes to ghcr.io, updates the k8s manifest
 # (image tag + VERSION env var), then commits + pushes so Flux picks it up.
@@ -11,10 +13,7 @@
 
 set -e
 
-VERSION=${1:?"Usage: ./deploy.sh <version>  e.g. ./deploy.sh 1.1.0"}
-
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-IMAGE="ghcr.io/skelstar/activity-logger:$VERSION"
 
 # Find the manifest — two possible layouts:
 #   Tatooine:  <repo-root>/deployments/activity-logger/src/  +  ../k8s/
@@ -36,34 +35,43 @@ if [ -z "$MANIFEST" ]; then
 fi
 echo "▶ Using manifest: $MANIFEST"
 
-# ── 0. Version check ─────────────────────────────────────────────────────────
-python3 - "$MANIFEST" "$VERSION" <<'EOF'
+# ── 0. Resolve + validate version ────────────────────────────────────────────
+VERSION=$(python3 - "$MANIFEST" "${1:-}" <<'EOF'
 import sys, re
-from functools import cmp_to_key
 
 def parse(v):
     try:
         return tuple(int(x) for x in v.strip().split('.'))
     except ValueError:
-        print(f"✗ Invalid version format '{v}' — must be X.Y.Z (e.g. 1.2.0)")
+        print(f"✗ Invalid version format '{v}' — must be X.Y.Z (e.g. 1.2.0)", file=sys.stderr)
         sys.exit(1)
 
-path, new_version = sys.argv[1], sys.argv[2]
+path, requested = sys.argv[1], sys.argv[2]
 with open(path) as f:
     content = f.read()
 
 m = re.search(r'- name: VERSION\s*\n\s*value: "([^"]+)"', content)
 if not m:
-    print("✗ Could not find VERSION in manifest.")
+    print("✗ Could not find VERSION in manifest.", file=sys.stderr)
     sys.exit(1)
 
 current = m.group(1)
-if parse(new_version) <= parse(current):
-    print(f"✗ Version {new_version} must be greater than current version {current}")
-    sys.exit(1)
+major, minor, patch = parse(current)
 
-print(f"  {current} → {new_version} ✓")
+if requested:
+    new_version = requested
+    if parse(new_version) <= parse(current):
+        print(f"✗ Version {new_version} must be greater than current version {current}", file=sys.stderr)
+        sys.exit(1)
+else:
+    new_version = f"{major}.{minor + 1}.0"
+
+print(f"  {current} → {new_version} ✓", file=sys.stderr)
+print(new_version)
 EOF
+)
+IMAGE="ghcr.io/skelstar/activity-logger:$VERSION"
+echo "▶ Version: $VERSION"
 
 # ── 1. Build ────────────────────────────────────────────────────────────────
 echo "▶ Building and pushing $IMAGE (linux/amd64)..."
