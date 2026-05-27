@@ -13,6 +13,12 @@
 
 set -e
 
+# Check Docker is available and running
+if ! docker info > /dev/null 2>&1; then
+  echo "✗ Docker is not running. On Mac, open Docker Desktop and wait for it to start."
+  exit 1
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Find the manifest — two possible layouts:
