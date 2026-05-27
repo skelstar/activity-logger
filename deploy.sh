@@ -14,8 +14,27 @@ set -e
 VERSION=${1:?"Usage: ./deploy.sh <version>  e.g. ./deploy.sh 1.1.0"}
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-MANIFEST="$SCRIPT_DIR/../k8s/manifests.yaml"
 IMAGE="ghcr.io/skelstar/activity-logger:$VERSION"
+
+# Find the manifest — two possible layouts:
+#   Tatooine:  <repo-root>/deployments/activity-logger/src/  +  ../k8s/
+#   Laptop:    GitHub/activity-logger/  +  ../Tatooine-Configuration/deployments/activity-logger/k8s/
+MANIFEST=""
+CANDIDATES=(
+  "$SCRIPT_DIR/../k8s/manifests.yaml"
+  "$SCRIPT_DIR/../Tatooine-Configuration/deployments/activity-logger/k8s/manifests.yaml"
+)
+for candidate in "${CANDIDATES[@]}"; do
+  if [ -f "$candidate" ]; then
+    MANIFEST="$(cd "$(dirname "$candidate")" && pwd)/$(basename "$candidate")"
+    break
+  fi
+done
+if [ -z "$MANIFEST" ]; then
+  echo "✗ Could not find k8s/manifests.yaml. Clone Tatooine-Configuration as a sibling of this repo."
+  exit 1
+fi
+echo "▶ Using manifest: $MANIFEST"
 
 # ── 1. Build ────────────────────────────────────────────────────────────────
 echo "▶ Building and pushing $IMAGE (linux/amd64)..."
