@@ -25,6 +25,18 @@
   opacity: .75;
   margin-top: .1rem;
 }
+.header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: .35rem;
+  flex-shrink: 0;
+}
+.version-badge {
+  font-size: .7rem;
+  opacity: .55;
+  letter-spacing: .03em;
+}
 .strava-btn {
   padding: .45rem 1rem;
   background: rgba(255,255,255,.15);

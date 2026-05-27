@@ -164,6 +164,14 @@ export default function App() {
   const [stravaTitle, setStravaTitle] = useState<string | null>(null)
   const [stravaLoading, setStravaLoading] = useState(false)
   const [stravaError, setStravaError] = useState<string | null>(null)
+  const [version, setVersion] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch('/api/version')
+      .then(r => r.json())
+      .then((data: { version: string }) => setVersion(data.version))
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     fetch('/api/routes')
@@ -241,13 +249,16 @@ export default function App() {
             <h1 className="header-title">Activity Logger</h1>
             <p className="header-sub">Log a run</p>
           </div>
-          <button
-            className="strava-btn"
-            onClick={fetchStravaActivity}
-            disabled={stravaLoading}
-          >
-            {stravaLoading ? 'Loading…' : 'Get from Strava'}
-          </button>
+          <div className="header-right">
+            {version && <span className="version-badge">{version}</span>}
+            <button
+              className="strava-btn"
+              onClick={fetchStravaActivity}
+              disabled={stravaLoading}
+            >
+              {stravaLoading ? 'Loading…' : 'Get from Strava'}
+            </button>
+          </div>
         </div>
         {stravaError && (
           <div className="strava-error">{stravaError}</div>

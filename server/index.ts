@@ -19,6 +19,10 @@ const customRoutes: string[] = []
 
 const allRoutes = () => [...DEFAULT_ROUTES, ...customRoutes]
 
+app.get('/api/version', (_req: Request, res: Response) => {
+  res.json({ version: process.env.VERSION ?? 'dev' })
+})
+
 app.get('/api/routes', (_req: Request, res: Response) => {
   res.json(allRoutes())
 })
