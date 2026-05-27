@@ -1,6 +1,10 @@
 import express, { Request, Response } from 'express'
+
+import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import cors from 'cors'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
 
 const isProd = process.env.NODE_ENV === 'production'
 
