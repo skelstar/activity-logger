@@ -18,12 +18,12 @@ MANIFEST="$SCRIPT_DIR/../k8s/manifests.yaml"
 IMAGE="ghcr.io/skelstar/activity-logger:$VERSION"
 
 # ── 1. Build ────────────────────────────────────────────────────────────────
-echo "▶ Building $IMAGE..."
-docker build -t "$IMAGE" "$SCRIPT_DIR"
-
-# ── 2. Push ─────────────────────────────────────────────────────────────────
-echo "▶ Pushing $IMAGE..."
-docker push "$IMAGE"
+echo "▶ Building and pushing $IMAGE (linux/amd64)..."
+docker buildx build \
+  --platform linux/amd64 \
+  --push \
+  -t "$IMAGE" \
+  "$SCRIPT_DIR"
 
 # ── 3. Update image tag + VERSION in the k8s manifest ───────────────────────
 echo "▶ Setting image=$IMAGE and VERSION=$VERSION in manifest..."
