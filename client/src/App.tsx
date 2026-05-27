@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+// @ts-ignore: allow importing CSS without type declarations
 import './App.css'
 import { RangeSlider } from './RangeSlider'
 
@@ -170,7 +171,7 @@ export default function App() {
     fetch('/api/version')
       .then(r => r.json())
       .then((data: { version: string }) => setVersion(data.version))
-      .catch(() => {})
+      .catch(() => setVersion('dev'))
   }, [])
 
   useEffect(() => {
@@ -248,9 +249,9 @@ export default function App() {
           <div>
             <h1 className="header-title">Activity Logger</h1>
             <p className="header-sub">Log a run</p>
+            {version && <span className="version-badge">{version}</span>}
           </div>
           <div className="header-right">
-            {version && <span className="version-badge">{version}</span>}
             <button
               className="strava-btn"
               onClick={fetchStravaActivity}

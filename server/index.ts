@@ -1,11 +1,7 @@
-import { config as loadEnv } from 'dotenv'
 import express, { Request, Response } from 'express'
-import cors from 'cors'
-import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
+import cors from 'cors'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-loadEnv({ path: join(__dirname, '..', '.env') })
 const isProd = process.env.NODE_ENV === 'production'
 
 const app = express()
@@ -20,7 +16,7 @@ const customRoutes: string[] = []
 const allRoutes = () => [...DEFAULT_ROUTES, ...customRoutes]
 
 app.get('/api/version', (_req: Request, res: Response) => {
-  res.json({ version: process.env.VERSION ?? 'dev' })
+  res.json({ version: process.env.VERSION ?? 'xx.xx.xx' })
 })
 
 app.get('/api/routes', (_req: Request, res: Response) => {

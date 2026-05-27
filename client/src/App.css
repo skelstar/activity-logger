@@ -6,7 +6,7 @@
 .header {
   background: var(--primary);
   color: #fff;
-  padding: 1.25rem 1.5rem 1rem;
+  padding: .8rem 1.5rem 1rem;
 }
 .header-row {
   display: flex;
@@ -33,9 +33,11 @@
   flex-shrink: 0;
 }
 .version-badge {
+  display: block;
   font-size: .7rem;
   opacity: .55;
   letter-spacing: .03em;
+  margin-top: .05rem;
 }
 .strava-btn {
   padding: .45rem 1rem;
