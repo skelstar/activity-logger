@@ -12,7 +12,7 @@ A mobile-first web app for logging runs. Fill in the form and copy the result as
 
 - Node.js 18+
 - Yarn (`npm install -g yarn`)
-- Docker (for building and deploying)
+- Docker (for building and deploying) — on Mac, Docker Desktop must be running before you use `./deploy.sh`
 
 ## Getting started
 
