@@ -12,7 +12,6 @@ A mobile-first web app for logging runs. Fill in the form and copy the result as
 
 - Node.js 18+
 - Yarn (`npm install -g yarn`)
-- Docker (for building and deploying) — on Mac, Docker Desktop must be running before you use `./deploy.sh`
 
 ## Getting started
 
@@ -59,85 +58,74 @@ yarn typecheck   # type-check client and server
 
 ## Deploying to Tatooine
 
-The app runs in k3s on Tatooine, managed by **FluxCD**. The full pipeline looks like this:
+The app runs in k3s on Tatooine, managed by **FluxCD**. Deploys are triggered automatically by **GitHub Actions** on every merge to `main` — you never need to SSH into Tatooine or run anything manually.
 
 ```
-You make code changes on your laptop
-  → git push to activity-logger repo
-    → ./deploy.sh builds image + pushes to ghcr.io
-      → manifest in Tatooine-Configuration repo is updated + pushed
-        → FluxCD on Tatooine polls GitHub every 5 minutes
-          → detects new commit → applies updated manifest
-            → Kubernetes pulls new image from ghcr.io → redeploys pod
-              → version badge in the app shows the new version
+PR merged to main
+  → GitHub Actions builds image + pushes to ghcr.io
+    → manifest in Tatooine-Configuration repo is updated + pushed
+      → FluxCD on Tatooine polls GitHub every 5 minutes
+        → detects new commit → applies updated manifest
+          → Kubernetes pulls new image from ghcr.io → redeploys pod
+            → version badge in the app shows the new version
 ```
-
-You never need to SSH into Tatooine. Everything flows through GitHub.
 
 ---
 
-### One-time setup (per machine)
+### One-time setup (per repo)
 
-**1. Clone both repos as siblings in the same folder:**
+**1. Create a fine-grained PAT** so GitHub Actions can write to `Tatooine-Configuration`:
 
-```bash
-git clone https://github.com/skelstar/activity-logger.git
-git clone https://github.com/skelstar/Tatooine-Configuration.git
-```
+- GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens
+- Name: `activity-logger-ci-tatooine-config-write`
+- Repository access: Only select repositories → `Tatooine-Configuration`
+- Permissions: **Contents → Read and write**
+- Generate and copy the token
 
-The `deploy.sh` script updates the manifest in `Tatooine-Configuration`, so both repos need to be present side-by-side.
+**2. Add secrets to this repo:**
 
-**2. Authenticate Docker with GitHub Container Registry:**
+- Go to this repo → Settings → Secrets and variables → Actions
+- Add `TATOOINE_PAT` with the token from above
+- `GITHUB_TOKEN` is automatic — GitHub provides it, nothing to add
 
-Create a [classic GitHub PAT](https://github.com/settings/tokens) with `write:packages` scope, then:
-
-```bash
-docker login ghcr.io -u skelstar
-# paste your write:packages token when prompted
-```
-
-This is stored in `~/.docker/config.json` and only needs to be done once per machine.
+**3. Enable branch protection on `main`** so the workflow only triggers on intentional merges (not direct pushes).
 
 ---
 
-### Releasing a new version
+### Triggering a deploy
 
-**1. Make your code changes, then commit and push:**
+| How | What happens |
+|---|---|
+| Merge a PR to `main` | Minor version is auto-bumped (e.g. `1.1.0 → 1.2.0`) |
+| Actions → Deploy → Run workflow → enter version | Deploys a specific version (must be greater than current) |
 
-```bash
-git add .
-git commit -m "describe your change"
-git push
-```
+---
 
-**2. Run the deploy script:**
+### Replicating this in another repo
 
-```bash
-./deploy.sh          # auto-bumps minor version (e.g. 1.1.0 → 1.2.0)
-./deploy.sh 2.0.0   # or specify a version explicitly (must be > current)
-```
+When copying `.github/workflows/deploy.yml` to another app repo, update these values in the workflow file:
 
-The script will:
-1. Read the current version from the k8s manifest and validate the new version is higher
-2. Build the Docker image for `linux/amd64` and push it to `ghcr.io/skelstar/activity-logger:<version>`
-3. Update the image tag and `VERSION` env var in `Tatooine-Configuration/deployments/activity-logger/k8s/manifests.yaml`
-4. Commit and push the manifest change to the Tatooine-Configuration repo
+| Field | Change to |
+|---|---|
+| `ghcr.io/skelstar/activity-logger` | `ghcr.io/skelstar/<app-name>` |
+| `deployments/activity-logger/k8s/manifests.yaml` | path for the new app in Tatooine-Configuration |
+| `activity-logger: release` (commit message) | `<app-name>: release` |
 
-**3. Wait up to 5 minutes** for FluxCD to poll GitHub and redeploy — or trigger it immediately from Tatooine:
-
-```bash
-kubectl -n flux-system annotate gitrepository tatooine-config \
-  reconcile.fluxcd.io/requestedAt="$(date -u +%Y-%m-%dT%H:%M:%SZ)" --overwrite
-```
-
-The version badge in the top-right of the app will update to confirm the new version is live.
+Then repeat the one-time setup above for the new repo.
 
 ---
 
 ### How it works under the hood
 
-- **ghcr.io** hosts the Docker images, tagged by version (e.g. `ghcr.io/skelstar/activity-logger:1.2.0`)
-- **FluxCD** runs in the `flux-system` namespace on Tatooine and watches the `skelstar/Tatooine-Configuration` GitHub repo
+- **GitHub Actions** (`.github/workflows/deploy.yml`) runs on merge to `main`, builds the Docker image for `linux/amd64`, pushes it to `ghcr.io/skelstar/activity-logger:<version>`, then commits the updated manifest to `Tatooine-Configuration`
+- **FluxCD** runs in the `flux-system` namespace on Tatooine and watches the `skelstar/Tatooine-Configuration` GitHub repo every 5 minutes
 - When FluxCD sees a new commit, it runs `kubectl apply` on the changed manifests
+- **Kubernetes** pulls the new image from `ghcr.io` using `ghcr-pull-secret` (a secret with a `read:packages` PAT, created once per app namespace on Tatooine)
 - The `VERSION` env var in the manifest is read by the Express server at runtime and displayed in the UI — it is not baked into the Docker image
-- k3s pulls images using the `ghcr-pull-secret` (a Kubernetes secret with a `read:packages` GitHub PAT), created once on Tatooine per app namespace
+
+### Force an immediate redeploy (from Tatooine)
+
+```bash
+kubectl -n flux-system annotate gitrepository tatooine-config \
+  reconcile.fluxcd.io/requestedAt="$(date -u +%Y-%m-%dT%H:%M:%SZ)" --overwrite
+```

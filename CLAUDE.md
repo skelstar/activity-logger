@@ -26,14 +26,14 @@ Yarn workspaces monorepo with two packages:
 
 ## Deployment
 
-The app runs in k3s on Tatooine, managed by FluxCD. See [README.md](README.md) for the full deploy workflow.
+The app runs in k3s on Tatooine, managed by FluxCD. Deploys are automated via GitHub Actions — see [README.md](README.md) for the full workflow.
 
-**Short version:** make changes, `git push`, run `./deploy.sh` — Tatooine redeploys automatically within 5 minutes. No SSH required.
+**Short version:** merge a PR to `main` → GitHub Actions builds the image, bumps the version, updates the manifest → FluxCD redeploys within 5 minutes. No SSH, no manual steps.
 
 ### Key facts
 - Images are published to `ghcr.io/skelstar/activity-logger:<version>`, built for `linux/amd64`
 - The k8s manifests live in the **Tatooine-Configuration** repo at `deployments/activity-logger/k8s/manifests.yaml` — not in this repo
-- `./deploy.sh` with no argument auto-bumps the minor version; pass a version explicitly to override
+- Merging to `main` auto-bumps the minor version; a manual workflow run allows specifying an explicit version
 - The version badge in the app UI reads `VERSION` from the environment at runtime — it is not baked into the image
 
 ## Planned work
