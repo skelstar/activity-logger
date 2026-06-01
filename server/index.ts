@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express'
 
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
+import { readFileSync, writeFileSync } from 'fs'
 import cors from 'cors'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -64,10 +65,31 @@ async function getStravaAccessToken(): Promise<string> {
     }),
   })
   if (!res.ok) throw new Error(`Strava token refresh failed: ${res.status}`)
-  const data = await res.json() as { access_token: string; expires_at: number }
+  const data = await res.json() as { access_token: string; expires_at: number; refresh_token: string }
   cachedAccessToken = data.access_token
   tokenExpiry = data.expires_at * 1000
+
+  // Persist the new refresh token so .env stays current after rotation
+  if (data.refresh_token && data.refresh_token !== STRAVA_REFRESH_TOKEN) {
+    process.env.STRAVA_REFRESH_TOKEN = data.refresh_token
+    persistRefreshToken(data.refresh_token)
+  }
+
   return cachedAccessToken
+}
+
+function persistRefreshToken(newToken: string) {
+  const envPath = join(__dirname, '.env')
+  try {
+    const current = readFileSync(envPath, 'utf8')
+    const updated = current.replace(
+      /^STRAVA_REFRESH_TOKEN=.*/m,
+      `STRAVA_REFRESH_TOKEN=${newToken}`,
+    )
+    writeFileSync(envPath, updated, 'utf8')
+  } catch {
+    // .env missing or unreadable — not fatal
+  }
 }
 
 app.get('/api/strava/latest-activity', async (_req: Request, res: Response) => {
