@@ -248,7 +248,7 @@ export default function App() {
         <div className="header-inner">
         <div className="header-row">
           <div className="header-left">
-            <img src="/logo.jpg" alt="Activity Logger logo" className="header-logo" />
+            <img src="/logo.png" alt="Activity Logger logo" className="header-logo" />
             <div>
               <h1 className="header-title">Activity Logger</h1>
               <p className="header-sub">Log a run</p>
