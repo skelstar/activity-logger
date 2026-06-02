@@ -245,11 +245,15 @@ export default function App() {
   return (
     <div className="app">
       <header className="header">
+        <div className="header-inner">
         <div className="header-row">
-          <div>
-            <h1 className="header-title">Activity Logger</h1>
-            <p className="header-sub">Log a run</p>
-            {version && <span className="version-badge">{version}</span>}
+          <div className="header-left">
+            <img src="/logo.jpg" alt="Activity Logger logo" className="header-logo" />
+            <div>
+              <h1 className="header-title">Activity Logger</h1>
+              <p className="header-sub">Log a run</p>
+              {version && <span className="version-badge">{version}</span>}
+            </div>
           </div>
           <div className="header-right">
             <button
@@ -260,6 +264,7 @@ export default function App() {
               {stravaLoading ? 'Loading…' : 'Get from Strava'}
             </button>
           </div>
+        </div>
         </div>
         {stravaError && (
           <div className="strava-error">{stravaError}</div>

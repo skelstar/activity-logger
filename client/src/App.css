@@ -6,7 +6,7 @@
 .header {
   background: var(--primary);
   color: #fff;
-  padding: .8rem 1.5rem 1rem;
+  padding: .8rem 0 1rem;
 }
 .header-row {
   display: flex;
@@ -24,6 +24,23 @@
   font-size: .85rem;
   opacity: .75;
   margin-top: .1rem;
+}
+.header-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+.header-logo {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: .5rem;
+  object-fit: cover;
+  flex-shrink: 0;
 }
 .header-right {
   display: flex;
