@@ -4,7 +4,7 @@ import './App.css'
 import { RangeSlider } from './RangeSlider'
 
 const DEFAULT_ROUTES = ['Tip Track Commute', 'Waimapihi', 'Fenceline']
-const TERRAINS = ['trail', 'road', 'treadmill'] as const
+const TERRAINS = ['trail', 'road', 'track', 'treadmill'] as const
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 type Terrain = typeof TERRAINS[number]
@@ -20,9 +20,7 @@ interface FormState {
   terrain: Terrain
   avgHr: string
   maxHr: string
-  hipStart: string
-  hipEnd: string
-  hipBehavior: string
+  injuries: string
   recovery: string
   notes: string
 }
@@ -35,11 +33,7 @@ interface ActivityJSON {
   terrain: string
   avg_hr: number | null
   max_hr: number | null
-  hip: {
-    start: number | null
-    end: number | null
-    behaviour: string[]
-  }
+  injuries: string
   recovery: string[]
   notes: string
 }
@@ -91,7 +85,7 @@ function toText(form: ResolvedFormState): string {
   const dv = [form.duration, form.vert ? `${form.vert}m` : ''].filter(Boolean)
   if (dv.length) lines.push(`Duration: ${dv.join(' / ')}`)
 
-  if (terrain) lines.push(`Type: ${terrain}`)
+  if (terrain) lines.push(`Terrain: ${terrain}`)
 
   const hr = [
     form.avgHr ? `${form.avgHr} bpm avg` : '',
@@ -99,13 +93,7 @@ function toText(form: ResolvedFormState): string {
   ].filter(Boolean)
   if (hr.length) lines.push(`HR: ${hr.join(' / ')}`)
 
-  const hs = form.hipStart !== '' ? form.hipStart : null
-  const he = form.hipEnd !== '' ? form.hipEnd : null
-  if (hs !== null || he !== null || form.hipBehavior) {
-    lines.push('Hip:')
-    if (hs !== null || he !== null) lines.push(`  ${hs ?? '?'}→${he ?? '?'}/10`)
-    if (form.hipBehavior) lines.push(`  Info: ${form.hipBehavior}`)
-  }
+  if (form.injuries) lines.push(`Injuries: ${form.injuries}`)
 
   if (form.recovery) lines.push(`Recovery: ${form.recovery}`)
 
@@ -127,11 +115,7 @@ function toJSON(form: ResolvedFormState): ActivityJSON {
     terrain: form.terrain || '',
     avg_hr: form.avgHr ? Number(form.avgHr) : null,
     max_hr: form.maxHr ? Number(form.maxHr) : null,
-    hip: {
-      start: form.hipStart !== '' ? Number(form.hipStart) : null,
-      end: form.hipEnd !== '' ? Number(form.hipEnd) : null,
-      behaviour: toSnakeArray(form.hipBehavior),
-    },
+    injuries: form.injuries || '',
     recovery: toSnakeArray(form.recovery),
     notes: form.notes || '',
   }
@@ -147,9 +131,7 @@ const INITIAL: FormState = {
   terrain: 'trail',
   avgHr: '',
   maxHr: '',
-  hipStart: '',
-  hipEnd: '',
-  hipBehavior: '',
+  injuries: '',
   recovery: '',
   notes: '',
 }
@@ -394,26 +376,15 @@ export default function App() {
             />
           </div>
 
-          {/* Hip */}
-          <div className="hr-box">
-            <div className="hr-box-title">Hip</div>
-            <RangeSlider
-              min={0}
-              max={5}
-              low={Number(form.hipStart)}
-              high={Number(form.hipEnd)}
-              onChange={(low, high) => { set('hipStart', String(low)); set('hipEnd', String(high)) }}
-            />
-            <div className="hip-values">
-              <span className="slider-value">Start - {form.hipStart}</span>
-              <span className="slider-value">End - {form.hipEnd}</span>
-            </div>
+          {/* Injuries */}
+          <div className="field">
+            <label className="label">Injuries</label>
             <input
-              className="input mt"
+              className="input"
               type="text"
-              placeholder="Behavior (e.g. stable, downhill-sensitive)"
-              value={form.hipBehavior}
-              onChange={e => set('hipBehavior', e.target.value)}
+              placeholder="e.g. hip stable, knee niggle on descent"
+              value={form.injuries}
+              onChange={e => set('injuries', e.target.value)}
             />
           </div>
 
