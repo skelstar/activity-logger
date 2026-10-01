@@ -92,17 +92,40 @@ function persistRefreshToken(newToken: string) {
   }
 }
 
-app.get('/api/strava/latest-activity', async (_req: Request, res: Response) => {
+interface StravaSummary {
+  id: number
+  name: string
+  start_date_local: string
+  sport_type?: string
+  average_heartrate?: number
+  max_heartrate?: number
+  moving_time?: number
+  total_elevation_gain?: number
+}
+
+app.get('/api/strava/activities', async (req: Request, res: Response) => {
   try {
+    const page = Math.max(1, parseInt(String(req.query.page ?? '1'), 10) || 1)
+    const perPage = Math.min(50, Math.max(1, parseInt(String(req.query.per_page ?? '15'), 10) || 15))
     const token = await getStravaAccessToken()
-    const r = await fetch('https://www.strava.com/api/v3/athlete/activities?per_page=1', {
+    const r = await fetch(`https://www.strava.com/api/v3/athlete/activities?page=${page}&per_page=${perPage}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
     if (!r.ok) { res.status(502).json({ error: `Strava API error: ${r.status}` }); return }
-    const activities = await r.json() as Array<{ name: string; average_heartrate?: number; max_heartrate?: number; moving_time?: number; total_elevation_gain?: number }>
-    if (!activities.length) { res.status(404).json({ error: 'No activities found' }); return }
-    const { name, average_heartrate, max_heartrate, moving_time, total_elevation_gain } = activities[0]
-    res.json({ name, avg_hr: average_heartrate ?? null, max_hr: max_heartrate ?? null, moving_time: moving_time ?? null, vert: total_elevation_gain ?? null })
+    const activities = await r.json() as StravaSummary[]
+    res.json({
+      activities: activities.map(a => ({
+        id: a.id,
+        name: a.name,
+        date: a.start_date_local.slice(0, 10),
+        type: a.sport_type ?? null,
+        avg_hr: a.average_heartrate ?? null,
+        max_hr: a.max_heartrate ?? null,
+        moving_time: a.moving_time ?? null,
+        vert: a.total_elevation_gain ?? null,
+      })),
+      hasMore: activities.length === perPage,
+    })
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : 'Unknown error' })
   }
