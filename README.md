@@ -32,6 +32,16 @@ Starts both servers concurrently:
 | App (Vite) | http://localhost:5173 |
 | API (Express) | http://localhost:3001 |
 
+To use "Get from Strava" locally, create `server/.env` (git-ignored) with:
+
+```
+STRAVA_CLIENT_ID=...
+STRAVA_CLIENT_SECRET=...
+STRAVA_REFRESH_TOKEN=...
+```
+
+The dev server loads it automatically, and rewrites `STRAVA_REFRESH_TOKEN` when Strava rotates it. The refresh token needs the `activity:read` scope (`activity:read_all` for private activities).
+
 ## Deployment
 ```
 git push

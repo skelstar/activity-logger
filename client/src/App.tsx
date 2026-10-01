@@ -121,6 +121,17 @@ function toJSON(form: ResolvedFormState): ActivityJSON {
   }
 }
 
+interface StravaActivity {
+  id: number
+  name: string
+  date: string
+  type: string | null
+  avg_hr: number | null
+  max_hr: number | null
+  moving_time: number | null
+  vert: number | null
+}
+
 const INITIAL: FormState = {
   date: 'today',
   dateCustom: '',
@@ -147,6 +158,10 @@ export default function App() {
   const [stravaTitle, setStravaTitle] = useState<string | null>(null)
   const [stravaLoading, setStravaLoading] = useState(false)
   const [stravaError, setStravaError] = useState<string | null>(null)
+  const [stravaOpen, setStravaOpen] = useState(false)
+  const [stravaActivities, setStravaActivities] = useState<StravaActivity[]>([])
+  const [stravaPage, setStravaPage] = useState(1)
+  const [stravaHasMore, setStravaHasMore] = useState(false)
   const [version, setVersion] = useState<string | null>(null)
 
   useEffect(() => {
@@ -201,27 +216,43 @@ export default function App() {
     }
   }
 
-  const fetchStravaActivity = async () => {
+  const loadStravaPage = async (page: number) => {
     setStravaLoading(true)
     setStravaError(null)
     try {
-      const res = await fetch('/api/strava/latest-activity')
-      const data = await res.json() as { name?: string; avg_hr?: number | null; max_hr?: number | null; moving_time?: number | null; vert?: number | null; error?: string }
-      if (!res.ok) { setStravaError(data.error ?? 'Failed to fetch'); return }
-      setStravaTitle(data.name ?? null)
-      if (data.avg_hr != null) set('avgHr', String(Math.round(data.avg_hr)))
-      if (data.max_hr != null) set('maxHr', String(Math.round(data.max_hr)))
-      if (data.vert != null) set('vert', String(Math.round(data.vert)))
-      if (data.moving_time != null) {
-        const h = Math.floor(data.moving_time / 3600)
-        const m = Math.floor((data.moving_time % 3600) / 60)
-        set('duration', h > 0 ? `${h}h${m}m` : `${m}m`)
-      }
+      const res = await fetch(`/api/strava/activities?page=${page}`)
+      const data = await res.json() as { activities?: StravaActivity[]; hasMore?: boolean; error?: string }
+      if (!res.ok || !data.activities) { setStravaError(data.error ?? 'Failed to fetch'); return }
+      setStravaActivities(prev => page === 1 ? data.activities! : [...prev, ...data.activities!])
+      setStravaHasMore(data.hasMore ?? false)
+      setStravaPage(page)
     } catch {
       setStravaError('Could not reach server')
     } finally {
       setStravaLoading(false)
     }
+  }
+
+  const openStravaPicker = () => {
+    setStravaOpen(true)
+    if (!stravaActivities.length) loadStravaPage(1)
+  }
+
+  const applyStravaActivity = (a: StravaActivity) => {
+    setStravaTitle(a.name)
+    if (a.date) {
+      set('date', 'custom')
+      set('dateCustom', a.date)
+    }
+    if (a.avg_hr != null) set('avgHr', String(Math.round(a.avg_hr)))
+    if (a.max_hr != null) set('maxHr', String(Math.round(a.max_hr)))
+    if (a.vert != null) set('vert', String(Math.round(a.vert)))
+    if (a.moving_time != null) {
+      const h = Math.floor(a.moving_time / 3600)
+      const m = Math.floor((a.moving_time % 3600) / 60)
+      set('duration', h > 0 ? `${h}h${m}m` : `${m}m`)
+    }
+    setStravaOpen(false)
   }
 
   return (
@@ -240,18 +271,42 @@ export default function App() {
           <div className="header-right">
             <button
               className="strava-btn"
-              onClick={fetchStravaActivity}
-              disabled={stravaLoading}
+              onClick={openStravaPicker}
             >
-              {stravaLoading ? 'Loading…' : 'Get from Strava'}
+              Get from Strava
             </button>
           </div>
         </div>
         </div>
-        {stravaError && (
-          <div className="strava-error">{stravaError}</div>
-        )}
       </header>
+
+      {stravaOpen && (
+        <div className="strava-modal-backdrop" onClick={() => setStravaOpen(false)}>
+          <div className="strava-modal" onClick={e => e.stopPropagation()}>
+            <div className="strava-modal-head">
+              <h2>Choose an activity</h2>
+              <button className="strava-modal-close" onClick={() => setStravaOpen(false)} aria-label="Close">×</button>
+            </div>
+            {stravaError && <div className="strava-modal-error">{stravaError}</div>}
+            <ul className="strava-list">
+              {stravaActivities.map(a => (
+                <li key={a.id}>
+                  <button className="strava-item" onClick={() => applyStravaActivity(a)}>
+                    <span className="strava-item-name">{a.name}</span>
+                    <span className="strava-item-meta">
+                      {a.date}{a.type ? ` · ${a.type}` : ''}{a.moving_time != null ? ` · ${Math.round(a.moving_time / 60)}m` : ''}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {stravaLoading && <div className="strava-modal-status">Loading…</div>}
+            {!stravaLoading && stravaHasMore && (
+              <button className="strava-more" onClick={() => loadStravaPage(stravaPage + 1)}>Load more</button>
+            )}
+          </div>
+        </div>
+      )}
 
       {stravaTitle && (
         <div className="activity-title">{stravaTitle}</div>
