@@ -5,3 +5,4 @@ server/dist
 *.local
 .env*
 client/src/assets/*
+server/data

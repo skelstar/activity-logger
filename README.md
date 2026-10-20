@@ -10,7 +10,7 @@ A mobile-first web app for logging runs. Fill in the form and copy the result as
 
 ## Prerequisites
 
-- Node.js 18+
+- Node.js 22.13+
 - Yarn (`npm install -g yarn`)
 
 ## Getting started
@@ -32,15 +32,27 @@ Starts both servers concurrently:
 | App (Vite) | http://localhost:5173 |
 | API (Express) | http://localhost:3001 |
 
-To use "Get from Strava" locally, create `server/.env` (git-ignored) with:
+To use "Connect with Strava" locally, create `server/.env` (git-ignored) with:
 
 ```
 STRAVA_CLIENT_ID=...
 STRAVA_CLIENT_SECRET=...
-STRAVA_REFRESH_TOKEN=...
+SESSION_SECRET=any-long-random-string
+PUBLIC_URL=http://localhost:5173
 ```
 
-The dev server loads it automatically, and rewrites `STRAVA_REFRESH_TOKEN` when Strava rotates it. The refresh token needs the `activity:read` scope (`activity:read_all` for private activities).
+Each user connects their own Strava account through OAuth (scope `activity:read_all`). Their tokens are stored in a SQLite database at `server/data/app.db` (git-ignored), or wherever `DATA_DIR` points.
+
+In your [Strava API settings](https://www.strava.com/settings/api), set **Authorization Callback Domain** to `localhost` for local development (the production host when deployed). The app can only be authorized by as many athletes as your Strava app allows (shown on that settings page).
+
+| Variable | Purpose |
+|---|---|
+| `STRAVA_CLIENT_ID` / `STRAVA_CLIENT_SECRET` | Identify this app to Strava |
+| `SESSION_SECRET` | Signs the session cookie (required in production) |
+| `PUBLIC_URL` | Public origin, used for the OAuth redirect URI (`<PUBLIC_URL>/api/strava/callback`). Default `http://localhost:5173` |
+| `DATA_DIR` | Directory for the SQLite file. Default `server/data`; `/data` in the Docker image |
+
+Requires Node 22.13+ (the server uses the built-in `node:sqlite`).
 
 ## Deployment
 ```
@@ -57,6 +69,8 @@ yarn start   # serve app + API on http://localhost:3000
 ```
 
 `yarn start` runs Express with `NODE_ENV=production`. It serves the built client files and the API from a single process on port 3000.
+
+The Docker image keeps the SQLite database in `/data`. In Kubernetes, mount a PersistentVolumeClaim there, run a single replica with the `Recreate` update strategy, and set `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `SESSION_SECRET`, and `PUBLIC_URL` in the manifest.
 
 ## Other scripts
 
