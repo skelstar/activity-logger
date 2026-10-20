@@ -72,6 +72,30 @@
 }
 .strava-btn:hover:not(:disabled) { background: rgba(255,255,255,.25); }
 .strava-btn:disabled { opacity: .6; cursor: default; }
+.strava-connect { text-decoration: none; display: inline-block; }
+.strava-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: rgba(255,255,255,.7);
+  font-size: .75rem;
+  font-family: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.strava-page-error {
+  max-width: 900px;
+  margin: 1rem auto 0;
+  padding: 0 1rem;
+  color: #c0392b;
+  font-size: .9rem;
+}
+.powered-by {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: .75rem;
+  padding: 1.5rem 1rem 2rem;
+}
 .strava-banner {
   margin-top: .75rem;
   font-size: .9rem;

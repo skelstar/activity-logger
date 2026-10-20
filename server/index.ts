@@ -2,8 +2,10 @@ import express, { Request, Response } from 'express'
 
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
-import { readFileSync, writeFileSync } from 'fs'
 import cors from 'cors'
+import cookieParser from 'cookie-parser'
+import { createSqliteTokenStore } from './db.js'
+import { createStravaRouter } from './strava.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -12,8 +14,15 @@ const isProd = process.env.NODE_ENV === 'production'
 const app = express()
 const PORT = isProd ? 3000 : 3001
 
+const sessionSecret = process.env.SESSION_SECRET
+if (!sessionSecret && isProd) {
+  throw new Error('SESSION_SECRET must be set in production')
+}
+const publicUrl = (process.env.PUBLIC_URL ?? 'http://localhost:5173').replace(/\/$/, '')
+
 if (!isProd) app.use(cors())
 app.use(express.json())
+app.use(cookieParser(sessionSecret ?? 'dev-only-secret'))
 
 const DEFAULT_ROUTES = ['Tip Track Commute', 'Waimapihi', 'Fenceline']
 const customRoutes: string[] = []
@@ -45,91 +54,7 @@ app.post('/api/routes', (req: Request, res: Response) => {
   res.json({ routes: allRoutes() })
 })
 
-let cachedAccessToken: string | null = null
-let tokenExpiry = 0
-
-async function getStravaAccessToken(): Promise<string> {
-  if (cachedAccessToken && Date.now() < tokenExpiry) return cachedAccessToken
-  const { STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET, STRAVA_REFRESH_TOKEN } = process.env
-  if (!STRAVA_CLIENT_ID || !STRAVA_CLIENT_SECRET || !STRAVA_REFRESH_TOKEN) {
-    throw new Error('Strava credentials not configured (STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET, STRAVA_REFRESH_TOKEN)')
-  }
-  const res = await fetch('https://www.strava.com/oauth/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      client_id: STRAVA_CLIENT_ID,
-      client_secret: STRAVA_CLIENT_SECRET,
-      refresh_token: STRAVA_REFRESH_TOKEN,
-      grant_type: 'refresh_token',
-    }),
-  })
-  if (!res.ok) throw new Error(`Strava token refresh failed: ${res.status}`)
-  const data = await res.json() as { access_token: string; expires_at: number; refresh_token: string }
-  cachedAccessToken = data.access_token
-  tokenExpiry = data.expires_at * 1000
-
-  // Persist the new refresh token so .env stays current after rotation
-  if (data.refresh_token && data.refresh_token !== STRAVA_REFRESH_TOKEN) {
-    process.env.STRAVA_REFRESH_TOKEN = data.refresh_token
-    persistRefreshToken(data.refresh_token)
-  }
-
-  return cachedAccessToken
-}
-
-function persistRefreshToken(newToken: string) {
-  const envPath = join(__dirname, '.env')
-  try {
-    const current = readFileSync(envPath, 'utf8')
-    const updated = current.replace(
-      /^STRAVA_REFRESH_TOKEN=.*/m,
-      `STRAVA_REFRESH_TOKEN=${newToken}`,
-    )
-    writeFileSync(envPath, updated, 'utf8')
-  } catch {
-    // .env missing or unreadable — not fatal
-  }
-}
-
-interface StravaSummary {
-  id: number
-  name: string
-  start_date_local: string
-  sport_type?: string
-  average_heartrate?: number
-  max_heartrate?: number
-  moving_time?: number
-  total_elevation_gain?: number
-}
-
-app.get('/api/strava/activities', async (req: Request, res: Response) => {
-  try {
-    const page = Math.max(1, parseInt(String(req.query.page ?? '1'), 10) || 1)
-    const perPage = Math.min(50, Math.max(1, parseInt(String(req.query.per_page ?? '15'), 10) || 15))
-    const token = await getStravaAccessToken()
-    const r = await fetch(`https://www.strava.com/api/v3/athlete/activities?page=${page}&per_page=${perPage}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    if (!r.ok) { res.status(502).json({ error: `Strava API error: ${r.status}` }); return }
-    const activities = await r.json() as StravaSummary[]
-    res.json({
-      activities: activities.map(a => ({
-        id: a.id,
-        name: a.name,
-        date: a.start_date_local.slice(0, 10),
-        type: a.sport_type ?? null,
-        avg_hr: a.average_heartrate ?? null,
-        max_hr: a.max_heartrate ?? null,
-        moving_time: a.moving_time ?? null,
-        vert: a.total_elevation_gain ?? null,
-      })),
-      hasMore: activities.length === perPage,
-    })
-  } catch (err) {
-    res.status(500).json({ error: err instanceof Error ? err.message : 'Unknown error' })
-  }
-})
+app.use('/api/strava', createStravaRouter(createSqliteTokenStore(), { publicUrl }))
 
 if (isProd) {
   const clientDist = join(__dirname, '..', 'client', 'dist')

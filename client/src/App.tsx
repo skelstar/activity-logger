@@ -163,12 +163,31 @@ export default function App() {
   const [stravaPage, setStravaPage] = useState(1)
   const [stravaHasMore, setStravaHasMore] = useState(false)
   const [version, setVersion] = useState<string | null>(null)
+  const [stravaUser, setStravaUser] = useState<{ connected: boolean; firstname: string | null } | null>(null)
 
   useEffect(() => {
     fetch('/api/version')
       .then(r => r.json())
       .then((data: { version: string }) => setVersion(data.version))
       .catch(() => setVersion('dev'))
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/strava/me')
+      .then(r => r.json())
+      .then((data: { connected: boolean; firstname: string | null }) => setStravaUser(data))
+      .catch(() => setStravaUser({ connected: false, firstname: null }))
+
+    const result = new URLSearchParams(window.location.search).get('strava')
+    if (result) {
+      const messages: Record<string, string> = {
+        denied: 'Strava connection was cancelled.',
+        scope: 'Activity access was not granted. Please tick "View data about your private activities" when connecting.',
+        error: 'Could not connect to Strava. Please try again.',
+      }
+      if (messages[result]) setStravaError(messages[result])
+      window.history.replaceState({}, '', window.location.pathname)
+    }
   }, [])
 
   useEffect(() => {
@@ -222,6 +241,13 @@ export default function App() {
     try {
       const res = await fetch(`/api/strava/activities?page=${page}`)
       const data = await res.json() as { activities?: StravaActivity[]; hasMore?: boolean; error?: string }
+      if (res.status === 401) {
+        setStravaUser({ connected: false, firstname: null })
+        setStravaOpen(false)
+        setStravaActivities([])
+        setStravaError('Strava connection expired. Please reconnect.')
+        return
+      }
       if (!res.ok || !data.activities) { setStravaError(data.error ?? 'Failed to fetch'); return }
       setStravaActivities(prev => page === 1 ? data.activities! : [...prev, ...data.activities!])
       setStravaHasMore(data.hasMore ?? false)
@@ -234,8 +260,16 @@ export default function App() {
   }
 
   const openStravaPicker = () => {
+    setStravaError(null)
     setStravaOpen(true)
     if (!stravaActivities.length) loadStravaPage(1)
+  }
+
+  const disconnectStrava = async () => {
+    await fetch('/api/strava/logout', { method: 'POST' }).catch(() => {})
+    setStravaUser({ connected: false, firstname: null })
+    setStravaActivities([])
+    setStravaTitle(null)
   }
 
   const applyStravaActivity = (a: StravaActivity) => {
@@ -269,12 +303,20 @@ export default function App() {
             </div>
           </div>
           <div className="header-right">
-            <button
-              className="strava-btn"
-              onClick={openStravaPicker}
-            >
-              Get from Strava
-            </button>
+            {stravaUser?.connected ? (
+              <>
+                <button className="strava-btn" onClick={openStravaPicker}>
+                  Get from Strava
+                </button>
+                <button className="strava-link" onClick={disconnectStrava}>
+                  Disconnect{stravaUser.firstname ? ` (${stravaUser.firstname})` : ''}
+                </button>
+              </>
+            ) : stravaUser && (
+              <a className="strava-btn strava-connect" href="/api/strava/login">
+                Connect with Strava
+              </a>
+            )}
           </div>
         </div>
         </div>
@@ -306,6 +348,10 @@ export default function App() {
             )}
           </div>
         </div>
+      )}
+
+      {stravaError && !stravaOpen && (
+        <div className="strava-page-error">{stravaError}</div>
       )}
 
       {stravaTitle && (
@@ -517,6 +563,7 @@ export default function App() {
           </div>
         </div>
       </div>
+      <footer className="powered-by">Powered by Strava</footer>
     </div>
   )
 }
