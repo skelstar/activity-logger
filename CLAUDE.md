@@ -26,17 +26,17 @@ Yarn workspaces monorepo with two packages:
 
 ## Deployment
 
-The app runs in k3s on Tatooine, managed by FluxCD. Deploys are automated via GitHub Actions — see [README.md](README.md) for the full workflow.
+The app runs in k3s on Tatooine, managed by FluxCD. See [README.md](README.md) and [TATOOINE-DEPLOY.md](TATOOINE-DEPLOY.md).
 
-**Short version:** merge a PR to `main` → GitHub Actions builds the image, bumps the version, updates the manifest → FluxCD redeploys within 5 minutes. No SSH, no manual steps.
+**Short version:** merge a PR to `main` → GitHub Actions typechecks, tests, builds the image and publishes a GitHub Release with `release.json`. **Nothing deploys automatically.** Deploys happen in Tatooine Deploy (`deploy.skelstar.io`), or by hand by editing the image line in Tatooine-Configuration until that's running.
 
 ### Key facts
 - Images are published to `ghcr.io/skelstar/activity-logger:<version>`, built for `linux/amd64`
 - The k8s manifests live in the **Tatooine-Configuration** repo at `deployments/activity-logger/k8s/manifests.yaml` — not in this repo
-- Merging to `main` auto-bumps the minor version; a manual workflow run allows specifying an explicit version
+- Merging to `main` bumps the minor version (from the latest `v*` git tag); a manual workflow run allows specifying an explicit version
 - Strava is connected per user via OAuth; tokens are stored in SQLite at `DATA_DIR` (`/data` in the image), so the pod needs a PVC mounted there, 1 replica, `Recreate` strategy
 - Required env in the manifest: `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `SESSION_SECRET`, `PUBLIC_URL`
-- The version badge in the app UI reads `VERSION` from the environment at runtime — it is not baked into the image
+- The version badge in the app UI reads `VERSION`, which is baked into the image at build time (`VERSION` build arg). Don't set it in the manifest: that would override it
 
 ## Planned work
 

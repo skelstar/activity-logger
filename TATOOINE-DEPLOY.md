@@ -1,6 +1,16 @@
+# Deploying activity-logger to Tatooine
+
+## How releases work (from 1.16.0)
+
+Merging to `main` runs `.github/workflows/release.yml`. It typechecks and tests, then builds `ghcr.io/skelstar/activity-logger:<version>` and publishes a GitHub Release `v<version>` with a `release.json` attached (version, commit, image digest). The minor version goes up by one each time; to choose a version, use Actions → Release → Run workflow.
+
+**A merge no longer deploys anything.** Tatooine Deploy (`deploy.skelstar.io`) will list the release and deploy it when you press the button. Until that's running, deploy by hand: in Tatooine-Configuration, set the image line in `deployments/activity-logger/k8s/manifests.yaml` to `ghcr.io/skelstar/activity-logger:<version>@<digest>`, using the digest from that release's `release.json`, and push. Flux applies it.
+
+When deploying 1.16.0 the first time, remove the `VERSION` env var from the manifest in the same commit (see below).
+
 # Tatooine deployment changes: Strava OAuth
 
-For whoever (or whatever) is editing `deployments/activity-logger/k8s/manifests.yaml` in **Tatooine-Configuration**. These changes must be in place **before** the `strava-oauth-multi-user` PR is merged to `main`, because the merge triggers a build and FluxCD redeploy.
+For whoever (or whatever) is editing `deployments/activity-logger/k8s/manifests.yaml` in **Tatooine-Configuration**. These changes were needed before the `strava-oauth-multi-user` PR was merged, and are already in place.
 
 ## What changed in the app
 
@@ -69,7 +79,7 @@ Remove `STRAVA_REFRESH_TOKEN`.
 
 Put the two secrets in a Kubernetes Secret (or whatever Tatooine uses for secrets) and reference them with `valueFrom.secretKeyRef`. Don't put them in plain text in the manifest.
 
-Keep the existing `VERSION` env var as is. The deploy workflow rewrites it by regex (`- name: VERSION` followed by `value: "..."`), so don't change that format.
+Remove the `VERSION` env var. From 1.16.0 the version is baked into the image at build time, and a `VERSION` in the manifest would override it with a stale value.
 
 ### 4. Ingress and TLS
 
