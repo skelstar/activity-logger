@@ -82,74 +82,36 @@ yarn typecheck   # type-check client and server
 
 ## Deploying to Tatooine
 
-The app runs in k3s on Tatooine, managed by **FluxCD**. Deploys are triggered automatically by **GitHub Actions** on every merge to `main` — you never need to SSH into Tatooine or run anything manually.
+The app runs in k3s on Tatooine, managed by **FluxCD**. Merging to `main` makes a **release**; it doesn't deploy anything. You deploy a release when you choose to, with Tatooine Deploy (`deploy.skelstar.io`).
 
 ```
 PR merged to main
-  → GitHub Actions builds image + pushes to ghcr.io
-    → manifest in Tatooine-Configuration repo is updated + pushed
-      → FluxCD on Tatooine polls GitHub every 5 minutes
-        → detects new commit → applies updated manifest
-          → Kubernetes pulls new image from ghcr.io → redeploys pod
-            → version badge in the app shows the new version
+  → GitHub Actions typechecks and tests, then builds the image and pushes it to ghcr.io
+    → publishes GitHub Release v<version> with release.json (version, commit, image digest)
+      → you press Deploy in Tatooine Deploy
+        → it commits the image to Tatooine-Configuration → Flux applies it → Kubernetes rolls out the pod
 ```
 
----
+Until Tatooine Deploy is running on Tatooine, do the deploy step by hand: in Tatooine-Configuration, set the image line in `deployments/activity-logger/k8s/manifests.yaml` to `ghcr.io/skelstar/activity-logger:<version>@<digest>` (the digest is in the release's `release.json`) and push. See [TATOOINE-DEPLOY.md](TATOOINE-DEPLOY.md).
 
-### One-time setup (per repo)
-
-**1. Create a fine-grained PAT** so GitHub Actions can write to `Tatooine-Configuration`:
-
-- GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens
-- Name: `activity-logger-ci-tatooine-config-write`
-- Repository access: Only select repositories → `Tatooine-Configuration`
-- Permissions: **Contents → Read and write**
-- Generate and copy the token
-
-**2. Add secrets to this repo:**
-
-- Go to this repo → Settings → Secrets and variables → Actions
-- Add `TATOOINE_PAT` with the token from above
-- `GITHUB_TOKEN` is automatic — GitHub provides it, nothing to add
-
-**3. Enable branch protection on `main`** so the workflow only triggers on intentional merges (not direct pushes).
-
----
-
-### Triggering a deploy
+### Making a release
 
 | How | What happens |
 |---|---|
-| Merge a PR to `main` | Minor version is auto-bumped (e.g. `1.1.0 → 1.2.0`) |
-| Actions → Deploy → Run workflow → enter version | Deploys a specific version (must be greater than current) |
+| Merge a PR to `main` | Minor version goes up by one (e.g. `1.16.0 → 1.17.0`). Changes to only `*.md`, `.claude/` or `.vscode/` don't make a release |
+| Actions → Release → Run workflow, with a version | Releases that exact version (must be greater than the latest) |
 
----
-
-### Replicating this in another repo
-
-When copying `.github/workflows/deploy.yml` to another app repo, update these values in the workflow file:
-
-| Field | Change to |
-|---|---|
-| `ghcr.io/skelstar/activity-logger` | `ghcr.io/skelstar/<app-name>` |
-| `deployments/activity-logger/k8s/manifests.yaml` | path for the new app in Tatooine-Configuration |
-| `activity-logger: release` (commit message) | `<app-name>: release` |
-
-Then repeat the one-time setup above for the new repo.
-
----
+Versions come from the git tags the workflow creates (`v1.16.0`, …). The first release is 1.16.0, continuing from 1.15.0, the last version deployed the old way.
 
 ### How it works under the hood
 
-- **GitHub Actions** (`.github/workflows/deploy.yml`) runs on merge to `main`, builds the Docker image for `linux/amd64`, pushes it to `ghcr.io/skelstar/activity-logger:<version>`, then commits the updated manifest to `Tatooine-Configuration`
-- **FluxCD** runs in the `flux-system` namespace on Tatooine and watches the `skelstar/Tatooine-Configuration` GitHub repo every 5 minutes
-- When FluxCD sees a new commit, it runs `kubectl apply` on the changed manifests
-- **Kubernetes** pulls the new image from `ghcr.io` using `ghcr-pull-secret` (a secret with a `read:packages` PAT, created once per app namespace on Tatooine)
-- The `VERSION` env var in the manifest is read by the Express server at runtime and displayed in the UI — it is not baked into the Docker image
+- **GitHub Actions** (`.github/workflows/release.yml`) needs no secrets of its own: it pushes to `ghcr.io` and creates the release with the built-in `GITHUB_TOKEN`
+- If typecheck or tests fail, no image or release is made
+- The version is baked into the image at build time (`VERSION` build arg), and the Express server serves it at `/api/version` for the badge in the UI
+- **Kubernetes** pulls the image from `ghcr.io` using `ghcr-pull-secret` (a secret with a `read:packages` PAT, created once per app namespace on Tatooine)
 
-### Force an immediate redeploy (from Tatooine)
+### Force Flux to sync now (from Tatooine)
 
 ```bash
-kubectl -n flux-system annotate gitrepository tatooine-config \
-  reconcile.fluxcd.io/requestedAt="$(date -u +%Y-%m-%dT%H:%M:%SZ)" --overwrite
+kubectl -n flux-system annotate gitrepository tatooine-config   reconcile.fluxcd.io/requestedAt="$(date -u +%Y-%m-%dT%H:%M:%SZ)" --overwrite
 ```
