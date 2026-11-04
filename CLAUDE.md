@@ -28,11 +28,11 @@ Yarn workspaces monorepo with two packages:
 
 The app runs in k3s on Tatooine, managed by FluxCD. See [README.md](README.md) and [TATOOINE-DEPLOY.md](TATOOINE-DEPLOY.md).
 
-**Short version:** merge a PR to `main` → GitHub Actions typechecks, tests, builds the image and publishes a GitHub Release with `release.json`. **Nothing deploys automatically.** Deploys happen in Tatooine Deploy (`deploy.skelstar.io`), or by hand by editing the image line in Tatooine-Configuration until that's running.
+**Short version:** merge a PR to `main` → GitHub Actions typechecks, tests, builds the image and publishes a GitHub Release with `release.json`. **Nothing deploys automatically.** Deploys happen in Tatooine Deploy (`deploy.skelstar.io`), or by hand until that's running, by editing `newTag` and `digest` in Tatooine-Configuration's `deployments/activity-logger/k8s/kustomization.yaml`.
 
 ### Key facts
 - Images are published to `ghcr.io/skelstar/activity-logger:<version>`, built for `linux/amd64`
-- The k8s manifests live in the **Tatooine-Configuration** repo at `deployments/activity-logger/k8s/manifests.yaml` — not in this repo
+- The k8s manifests live in the **Tatooine-Configuration** repo at `deployments/activity-logger/k8s/` — not in this repo. `manifests.yaml` has the objects; `kustomization.yaml` pins the image version
 - Merging to `main` bumps the minor version (from the latest `v*` git tag); a manual workflow run allows specifying an explicit version
 - Strava is connected per user via OAuth; tokens are stored in SQLite at `DATA_DIR` (`/data` in the image), so the pod needs a PVC mounted there, 1 replica, `Recreate` strategy
 - Required env in the manifest: `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `SESSION_SECRET`, `PUBLIC_URL`

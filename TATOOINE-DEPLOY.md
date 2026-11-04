@@ -4,7 +4,7 @@
 
 Merging to `main` runs `.github/workflows/release.yml`. It typechecks and tests, then builds `ghcr.io/skelstar/activity-logger:<version>` and publishes a GitHub Release `v<version>` with a `release.json` attached (version, commit, image digest). The minor version goes up by one each time; to choose a version, use Actions → Release → Run workflow.
 
-**A merge no longer deploys anything.** Tatooine Deploy (`deploy.skelstar.io`) will list the release and deploy it when you press the button. Until that's running, deploy by hand: in Tatooine-Configuration, set the image line in `deployments/activity-logger/k8s/manifests.yaml` to `ghcr.io/skelstar/activity-logger:<version>@<digest>`, using the digest from that release's `release.json`, and push. Flux applies it.
+**A merge no longer deploys anything.** Tatooine Deploy (`deploy.skelstar.io`) will list the release and deploy it when you press the button. Until that's running, deploy by hand: in Tatooine-Configuration, set `newTag` and `digest` under `images:` in `deployments/activity-logger/k8s/kustomization.yaml` (the digest is in the release's `release.json`) and push. Flux applies it. Leave the image line in `manifests.yaml` without a version; `kustomization.yaml` sets it.
 
 When deploying 1.16.0 the first time, remove the `VERSION` env var from the manifest in the same commit (see below).
 
