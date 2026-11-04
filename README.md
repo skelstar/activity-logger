@@ -92,7 +92,7 @@ PR merged to main
         → it commits the image to Tatooine-Configuration → Flux applies it → Kubernetes rolls out the pod
 ```
 
-Until Tatooine Deploy is running on Tatooine, do the deploy step by hand: in Tatooine-Configuration, set the image line in `deployments/activity-logger/k8s/manifests.yaml` to `ghcr.io/skelstar/activity-logger:<version>@<digest>` (the digest is in the release's `release.json`) and push. See [TATOOINE-DEPLOY.md](TATOOINE-DEPLOY.md).
+Until Tatooine Deploy is running on Tatooine, do the deploy step by hand: in Tatooine-Configuration, set `newTag` and `digest` under `images:` in `deployments/activity-logger/k8s/kustomization.yaml` (the digest is in the release's `release.json`) and push. See [TATOOINE-DEPLOY.md](TATOOINE-DEPLOY.md).
 
 ### Making a release
 
