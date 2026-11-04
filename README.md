@@ -82,17 +82,17 @@ yarn typecheck   # type-check client and server
 
 ## Deploying to Tatooine
 
-The app runs in k3s on Tatooine, managed by **FluxCD**. Merging to `main` makes a **release**; it doesn't deploy anything. You deploy a release when you choose to, with Tatooine Deploy (`deploy.skelstar.io`).
+The app runs in k3s on Tatooine, managed by **FluxCD**. Merging to `main` makes a **release**; it doesn't deploy anything. You deploy a release when you choose to, with Kraken (`kraken.skelstar.io`).
 
 ```
 PR merged to main
   → GitHub Actions typechecks and tests, then builds the image and pushes it to ghcr.io
     → publishes GitHub Release v<version> with release.json (version, commit, image digest)
-      → you press Deploy in Tatooine Deploy
+      → you press Deploy in Kraken
         → it commits the image to Tatooine-Configuration → Flux applies it → Kubernetes rolls out the pod
 ```
 
-Until Tatooine Deploy is running on Tatooine, do the deploy step by hand: in Tatooine-Configuration, set `newTag` and `digest` under `images:` in `deployments/activity-logger/k8s/kustomization.yaml` (the digest is in the release's `release.json`) and push. See [TATOOINE-DEPLOY.md](TATOOINE-DEPLOY.md).
+Until Kraken is running on Tatooine, do the deploy step by hand: in Tatooine-Configuration, set `newTag` and `digest` under `images:` in `deployments/activity-logger/k8s/kustomization.yaml` (the digest is in the release's `release.json`) and push. See [TATOOINE-DEPLOY.md](TATOOINE-DEPLOY.md).
 
 ### Making a release
 
