@@ -1,9 +1,9 @@
 # .github/workflows/release.yml
 #
 # Every merge to main builds an image and publishes a GitHub Release with release.json.
-# It never deploys: Tatooine Deploy (deploy.skelstar.io) reads the release and deploys
-# it when you press the button. Until that runs on Tatooine, deploy by editing the image
-# line in Tatooine-Configuration/deployments/activity-logger/k8s/manifests.yaml.
+# It never deploys: Kraken (kraken.skelstar.io) reads the release and deploys it when you
+# press the button. If Kraken is down, deploy by editing newTag and digest in
+# Tatooine-Configuration/deployments/activity-logger/k8s/kustomization.yaml.
 name: Release
 
 on:
@@ -104,7 +104,7 @@ jobs:
           build-args: |
             VERSION=${{ steps.version.outputs.version }}
 
-      # release.json is what Tatooine Deploy reads. The digest pins exactly what was built,
+      # release.json is what Kraken reads. The digest pins exactly what was built,
       # so staging and production run the same image.
       - name: Write release.json
         env:
