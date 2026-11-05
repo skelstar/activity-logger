@@ -33,8 +33,6 @@ Tip Track Commute
 Trail
 136 avg / 148 max
 Hip 0→2
-Stable, downhill-sensitive
-Strong finish, could continue
 Notes:
 Poles helped on descents.
 ```
@@ -58,10 +56,6 @@ Poles helped on descents.
       "downhill_related"
     ]
   },
-  "recovery": [
-    "felt_strong",
-    "could_continue"
-  ],
   "notes": "Poles helped a lot."
 }
 ```

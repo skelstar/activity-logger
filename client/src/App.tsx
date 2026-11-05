@@ -4,6 +4,8 @@ import './App.css'
 import { RangeSlider } from './RangeSlider'
 
 const DEFAULT_ROUTES = ['Tip Track Commute', 'Waimapihi', 'Fenceline']
+const HR_DEFAULT_MIN = 120
+const HR_DEFAULT_MAX = 160
 const TERRAINS = ['trail', 'road', 'track', 'treadmill'] as const
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -20,8 +22,6 @@ interface FormState {
   terrain: Terrain
   avgHr: string
   maxHr: string
-  injuries: string
-  recovery: string
   notes: string
 }
 
@@ -33,8 +33,6 @@ interface ActivityJSON {
   terrain: string
   avg_hr: number | null
   max_hr: number | null
-  injuries: string
-  recovery: string[]
   notes: string
 }
 
@@ -62,14 +60,6 @@ function getISODate(dateStr: string): string {
   return dateStr
 }
 
-function toSnakeArray(text: string): string[] {
-  if (!text) return []
-  return text
-    .split(',')
-    .map(s => s.trim().toLowerCase().replace(/[\s-]+/g, '_'))
-    .filter(Boolean)
-}
-
 type ResolvedFormState = Omit<FormState, 'date'> & { date: string }
 
 function toText(form: ResolvedFormState): string {
@@ -93,10 +83,6 @@ function toText(form: ResolvedFormState): string {
   ].filter(Boolean)
   if (hr.length) lines.push(`HR: ${hr.join(' / ')}`)
 
-  if (form.injuries) lines.push(`Injuries: ${form.injuries}`)
-
-  if (form.recovery) lines.push(`Recovery: ${form.recovery}`)
-
   if (form.notes) {
     lines.push('Notes:')
     lines.push(form.notes.split('\n').map(l => `  ${l}`).join('\n'))
@@ -115,8 +101,6 @@ function toJSON(form: ResolvedFormState): ActivityJSON {
     terrain: form.terrain || '',
     avg_hr: form.avgHr ? Number(form.avgHr) : null,
     max_hr: form.maxHr ? Number(form.maxHr) : null,
-    injuries: form.injuries || '',
-    recovery: toSnakeArray(form.recovery),
     notes: form.notes || '',
   }
 }
@@ -142,8 +126,6 @@ const INITIAL: FormState = {
   terrain: 'trail',
   avgHr: '',
   maxHr: '',
-  injuries: '',
-  recovery: '',
   notes: '',
 }
 
@@ -155,6 +137,17 @@ export default function App() {
   const [editedText, setEditedText] = useState<string | null>(null)
   const [editedJson, setEditedJson] = useState<string | null>(null)
   const previewRef = useRef<HTMLTextAreaElement>(null)
+
+  // HR slider range: 120-160 by default, widened (never narrowed, so dragging
+  // stays stable) in steps of 10 to fit values outside that range.
+  const hrLow = Number(form.avgHr) || 132
+  const hrHigh = Number(form.maxHr) || 148
+  const [hrBounds, setHrBounds] = useState({ min: HR_DEFAULT_MIN, max: HR_DEFAULT_MAX })
+  const hrMin = Math.min(hrBounds.min, Math.floor(Math.min(hrLow, hrHigh) / 10) * 10)
+  const hrMax = Math.max(hrBounds.max, Math.ceil(Math.max(hrLow, hrHigh) / 10) * 10)
+  useEffect(() => {
+    setHrBounds(b => (b.min === hrMin && b.max === hrMax ? b : { min: hrMin, max: hrMax }))
+  }, [hrMin, hrMax])
   const [stravaTitle, setStravaTitle] = useState<string | null>(null)
   const [stravaLoading, setStravaLoading] = useState(false)
   const [stravaError, setStravaError] = useState<string | null>(null)
@@ -460,44 +453,22 @@ export default function App() {
             <div className="hr-values">
               {(['avgHr', 'maxHr'] as const).map((key, i) => {
                 const val = Number(form[key]) || (key === 'avgHr' ? 132 : 148)
-                const pct = ((val - 120) / (160 - 120)) * 100
+                const pct = ((val - hrMin) / (hrMax - hrMin)) * 100
+                // Keep labels inside the box when a value sits near either end
+                const left = Math.max(12, Math.min(88, pct))
                 return (
-                  <div key={key} className="hr-handle-label" style={{ left: `${pct}%` }}>
+                  <div key={key} className="hr-handle-label" style={{ left: `${left}%` }}>
                     <span className="slider-value">{i === 0 ? 'AVG' : 'MAX'} [{form[key]}]</span>
                   </div>
                 )
               })}
             </div>
             <RangeSlider
-              min={120}
-              max={160}
-              low={Number(form.avgHr) || 132}
-              high={Number(form.maxHr) || 148}
+              min={hrMin}
+              max={hrMax}
+              low={hrLow}
+              high={hrHigh}
               onChange={(low, high) => { set('avgHr', String(low)); set('maxHr', String(high)) }}
-            />
-          </div>
-
-          {/* Injuries */}
-          <div className="field">
-            <label className="label">Injuries</label>
-            <input
-              className="input"
-              type="text"
-              placeholder="e.g. hip stable, knee niggle on descent"
-              value={form.injuries}
-              onChange={e => set('injuries', e.target.value)}
-            />
-          </div>
-
-          {/* Recovery */}
-          <div className="field">
-            <label className="label">Recovery</label>
-            <input
-              className="input"
-              type="text"
-              placeholder="e.g. strong finish, could continue"
-              value={form.recovery}
-              onChange={e => set('recovery', e.target.value)}
             />
           </div>
 
